@@ -6,3 +6,5 @@ rpart
 randomForest
 RGtk2
 rattle
+rpart.plot
+e1071

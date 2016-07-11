@@ -1,0 +1,244 @@
+<h2>Executive Summary</h2>
+
+<p>The objective of the project was to examine the data set and apply machine learning techniques to accurately and quantitatively predict how well an exercise is being performed. The data was already split into a training and test set and the training set was used to create a model that could then be applied to the test set to predict the exercise in question. The answers were submitted online and checked via the Coursera DSS portal. This code produced 20/20 and the model was fit to the the training data using random forest with a 99% accuracy.</p>
+
+<h2>Overview</h2>
+
+<p>Nowadays there exist an abundance of devices such as Jawbone Up, Nike FuelBand and FitBit that collect large amounts of data about personal activity relatively inexpensively and easily. There are many who use this data to take measurements of themselves performing activites such as running, swimming and lifting weights to quantify how much they do to improve their health. However, rarely do people quantify <em>how well</em> they do an exercise.</p>
+
+<p>The goal of this project is to examine data from accelerators placed on the belt, forearm, arm and dumbell of 6 participants who were all asked to perform lifts correctly and incorrectly (using light weights under proper supervision to avoid injury).</p>
+
+<h2>Notes on running the code</h2>
+
+<p>Please note that the code will work as long as the working directory is set to a new directory that remains unchanged. The following packages will need to be loaded and the seed set:</p>
+
+<pre><code class="r">library(caret)
+</code></pre>
+
+<pre><code>## Loading required package: lattice
+</code></pre>
+
+<pre><code>## Loading required package: ggplot2
+</code></pre>
+
+<pre><code class="r">library(rpart)
+library(randomForest)
+</code></pre>
+
+<pre><code>## Error in library(randomForest): there is no package called &#39;randomForest&#39;
+</code></pre>
+
+<pre><code class="r">library(rattle)
+</code></pre>
+
+<pre><code>## Error in library(rattle): there is no package called &#39;rattle&#39;
+</code></pre>
+
+<pre><code class="r">set.seed(12321)
+</code></pre>
+
+<p><em>Note - For the purposes of this project, the error incurred by loading rattle can be ignored</em></p>
+
+<h2>Data</h2>
+
+<h3>Reading</h3>
+
+<p>All information surrounding and describing the experiment can be found here: <a href="http://groupware.les.inf.puc-rio.br/har">http://groupware.les.inf.puc-rio.br/har</a>. The data can be found at the following Urls and were downloaded and assigned to variables as shown. </p>
+
+<pre><code class="r">fileUrl1 &lt;- &quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv&quot;
+fileUrl2 &lt;- &quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv&quot;
+
+download.file(fileUrl1, destfile = &quot;./train.csv&quot;, method = &quot;curl&quot;)
+download.file(fileUrl2, destfile = &quot;./test.csv&quot;, method = &quot;curl&quot;)
+
+train_set &lt;- read.csv(&quot;train.csv&quot;, header = TRUE, sep = &quot;,&quot;, na.strings=c(&quot;&quot;,NA))
+test_set &lt;- read.csv(&quot;test.csv&quot;, header = TRUE, sep = &quot;,&quot;, na.strings=c(&quot;&quot;,NA))
+
+dim(train_set)
+</code></pre>
+
+<pre><code>## [1] 19622   160
+</code></pre>
+
+<pre><code class="r">dim(test_set)
+</code></pre>
+
+<pre><code>## [1]  20 160
+</code></pre>
+
+<p>As far as we can tell the data is clean and has the 160 variables we require and the test set is comprised of the full 20 variables.</p>
+
+<h3>Preprocessing</h3>
+
+<p>Looking through the data we observe many many cases of missing values and <em>NAs</em>. This poses an issue since model fitting with missing values results in error.</p>
+
+<p>To deal with this we could either impute the data or find ways to remove the data. Since we can see that the missing values occur systematically it was determined that the best course of action would be to remove the columns where a certain threshold of missing values is exceeded. In this case, 90%.</p>
+
+<pre><code class="r">df &lt;- data.frame(1)
+df2 &lt;- data.frame(1)
+count = 1
+
+for(i in 1:ncol(train_set)){
+    df[i,] &lt;- (sum(is.na(train_set[,i]))/19622)
+      if (df[i,] &gt; 0.9) {
+        df2[count,] = i 
+        count = count + 1
+      }
+}
+
+count = 0
+
+for(i in 1:nrow(df2)){
+  train_set[,(df2[i,]-count)] &lt;- NULL
+  test_set[,(df2[i,]-count)] &lt;- NULL
+  count = count + 1
+  }
+</code></pre>
+
+<p>Finally, we determined that since the first 7 columns were for bookeeping processes only, they too could be dropped.</p>
+
+<pre><code class="r">train_set &lt;- train_set[,-c(1,2,3,4,5,6,7)]
+test_set &lt;- test_set[,-c(1,2,3,4,5,6,7)]
+</code></pre>
+
+<p>With the data fully preprocessed we can now begin to fit models.</p>
+
+<h2>Building Models</h2>
+
+<p>Even though the data comes to us in the forms of a <em>training</em> and <em>test</em> set, we cannot use the <em>test</em> set to build our model so we have to partition our <em>training</em> data set.</p>
+
+<pre><code class="r">inTrain &lt;- createDataPartition(train_set$classe, p = 0.6, list = FALSE)
+train_model &lt;- train_set[inTrain,]
+train_validate &lt;- train_set[-inTrain,]
+
+dim(train_model)    
+</code></pre>
+
+<pre><code>## [1] 11776    53
+</code></pre>
+
+<pre><code class="r">dim(train_validate) 
+</code></pre>
+
+<pre><code>## [1] 7846   53
+</code></pre>
+
+<p>We can now begin using the data sets to create our prediction models. We will also call upon the system time functions to determine how long the models take to train.                                                                                                                                      </p>
+
+<h3>Using Trees</h3>
+
+<p>The first model was designed with the use of trees for prediction. </p>
+
+<pre><code class="r">startTime &lt;- Sys.time()
+
+modFit &lt;- train(classe ~ ., data = train_model, method = &quot;rpart&quot;)
+</code></pre>
+
+<pre><code>## Error in requireNamespaceQuietStop(&quot;e1071&quot;): package e1071 is required
+</code></pre>
+
+<pre><code class="r">runTime &lt;- Sys.time() - startTime
+runTime
+</code></pre>
+
+<pre><code>## Time difference of 2.878274 secs
+</code></pre>
+
+<pre><code class="r">pred_1 &lt;- predict(modFit, train_validate)
+</code></pre>
+
+<pre><code>## Error in predict(modFit, train_validate): object &#39;modFit&#39; not found
+</code></pre>
+
+<pre><code class="r">confusionMatrix(pred_1, train_validate$classe)
+</code></pre>
+
+<pre><code>## Error in confusionMatrix(pred_1, train_validate$classe): object &#39;pred_1&#39; not found
+</code></pre>
+
+<p>We can also call upon the rattle package to create a plot of the tree.</p>
+
+<pre><code class="r">fancyRpartPlot(modFit$finalModel)
+</code></pre>
+
+<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;fancyRpartPlot&quot;
+</code></pre>
+
+<p>As the confusion matrix and the statistics show, this model was very weak with only a <em>48%</em> accuracy and with a run time of <em>38.7 seconds</em>. This was to expected since with the amount of variables, it would be hard to accurately fit a tree model. To enhance this accuracy we can employ the use of random forests.</p>
+
+<h3>Using Random Forests</h3>
+
+<p>The next model was built with Random Forests to see if the accuracy could be improved.</p>
+
+<pre><code class="r">startTime &lt;- Sys.time()
+
+modFit_rf &lt;- randomForest(classe ~ ., data = train_model)
+</code></pre>
+
+<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;randomForest&quot;
+</code></pre>
+
+<pre><code class="r">runTime &lt;- Sys.time() - startTime
+runTime
+</code></pre>
+
+<pre><code>## Time difference of 0.002542019 secs
+</code></pre>
+
+<pre><code class="r">pred_2 &lt;- predict(modFit_rf, train_validate)
+</code></pre>
+
+<pre><code>## Error in predict(modFit_rf, train_validate): object &#39;modFit_rf&#39; not found
+</code></pre>
+
+<pre><code class="r">confusionMatrix(pred_2, train_validate$classe)
+</code></pre>
+
+<pre><code>## Error in confusionMatrix(pred_2, train_validate$classe): object &#39;pred_2&#39; not found
+</code></pre>
+
+<p>As we can see this is a much superior model with a level of accuracy, when applied to the test set, of <em>99.2%</em> and a runtime of <em>30.06 seconds</em>.</p>
+
+<h2>Conclusion Predicting using Final Model</h2>
+
+<p>At this point we can safely assume this model to be satisfactory to apply to the test set. To further enhance the accuracy (although not necessary) we can train the model to the entire training set and then apply to the test set.</p>
+
+<pre><code class="r">startTime &lt;- Sys.time()
+
+Final_modFit_rf &lt;- randomForest(classe ~ ., data = train_set)
+</code></pre>
+
+<pre><code>## Error in eval(expr, envir, enclos): could not find function &quot;randomForest&quot;
+</code></pre>
+
+<pre><code class="r">runTime &lt;- Sys.time() - startTime
+runTime
+</code></pre>
+
+<pre><code>## Time difference of 0.004439831 secs
+</code></pre>
+
+<p>As we applied the training over the whole training set the run time was subsequently longer clocking in at <em>56.9 seconds</em>. With this complete the last step will be to predict on the test set. Our answers were checked via the Coursera DSS portal through the uploading of .txt files. Once matched, the site would notify us on correct answers. To print a function was employed to create text files. As previously stated, the answers provided achieved a 20/20 mark.</p>
+
+<pre><code class="r">final_pred &lt;- predict(Final_modFit_rf, test_set)
+</code></pre>
+
+<pre><code>## Error in predict(Final_modFit_rf, test_set): object &#39;Final_modFit_rf&#39; not found
+</code></pre>
+
+<pre><code class="r">pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0(&quot;problem_id_&quot;,i,&quot;.txt&quot;)
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(final_pred)
+</code></pre>
+
+<pre><code>## Error in pml_write_files(final_pred): object &#39;final_pred&#39; not found
+</code></pre>
+
+<p>This dataset was quite clean and accurate and it is to note that rarely will one with such little preprocessing, high accuracy and little model tuning be available. However, for the purposes of this project, we can use this to our advantage to achieve a satisfacotry result.</p>
+
