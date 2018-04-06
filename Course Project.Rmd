@@ -1,21 +1,18 @@
 ---
-title: "Practical Machine Learning - Course Project"
-author: "Usamah Khan"
-date: "August 20, 2015"
-output: html_document
----
 
 ## Overview
 
-Nowadays it seems like everyone at the gym or the park wears the coloured band of a FitBit, Nike FuelBand, Jawbone Up or some other activity tracker on their arm. You may very well have one on as you read this. These tools aim to collect huge amounts of data about personal activity, relatively inexpensively and easily. This allows us to take measurements of ourselves performing activites such as running, swimming and lifting so as to quantify how much we do to improve our health. However, rarely do we try to **quantify** *how well* we perform an activity.
+Nowadays you look around and it seems like everyone at the gym or the park is wearing the coloured band of a FitBit, FuelBand, Apple Watch, Jawbone Up or some other activity tracker on their arm. You might very well have one on as you read this. These tools work to collect huge amounts of data about our personal activity, relatively inexpensively and easily. This allows us to quantify how much we do to improve our health by taking measurements of ourselves performing activites such as running, swimming and lifting weights. However, rarely do we try to quantify ***how well*** we perform an activity.
 
-The Human Activity Recognitoin Project (HAR) aims to do just that. By placing accelerometers on the belt, forearm, arm and dumbell of 6 participants who were all asked to perform lifts correctly and incorrectly (using light weights under proper supervision to avoid injury). The goal of the project was to examine how could they determine a reference for how well an exercise is being performed.
+The Human Activity Recognition Project (HAR) aimed to do just that. After placing accelerometers on the belt, forearm, arm and dumbell of 6 participants they were all asked to perform lifts correctly and incorrectly (using light weights under proper supervision to avoid injury). The goal was to examine how could they determine a reference point for *how well* an exercise is being performed.
 
-By taking the data and sets of "good" and "bad" workouts we can create tools that can help us stay on track of performing workouts well and safely. The purpose of this project is to build Machine Learning algorithm using different packages in R to determine these questions. R has many ML libraries available and as such determining the pros and cons of each is a useful undertaking.
+By taking the data of the sets of "good" and "bad" workouts we can create tools that can help us stay on track of performing workouts well and safely. The purpose of this project is to create and contrast Machine Learning algorithms using different packages in R to determine these questions. R has many ML libraries available and as such, determining the pros and cons of each is a useful undertaking.
+
+---
 
 ## Loading libraries
 
-So now that the purpose of this project has been outlined as to test packages and contrast the differences between them, as part of showing my workflow, I've loaded up my packages first and set a random seed for reproducibility if anyone wants to have a go. 
+So now that the purpose of this project has been outlined as to test packages and contrast the differences between them to determine a reference for proper workout technique, as part of showing my workflow, I've loaded up the packages we'll need first and set a random seed for reproducibility. If anyone wants to have a go these are all the packages that you'll need. 
 
 ```{r Loading Packages, cache=TRUE}
 library(caret)
@@ -28,7 +25,11 @@ library(e1071)
 set.seed(12321)
 ```
 
+---
+
 ## Data
+
+---
 
 ### Reading
 
@@ -47,6 +48,8 @@ test_set <- read.csv("test.csv", header = TRUE, sep = ",", na.strings=c("",NA))
 dim(train_set)
 dim(test_set)
 ```
+
+---
 
 ### Pre-processing
 
@@ -87,7 +90,11 @@ test_set <- test_set[,-c(1,2,3,4,5,6,7)]
 
 Voila. Now, with the data fully pre-processed, we can begin to fit and play with some models.
 
+---
+
 ## Building Models
+
+---
 
 So now that we're trying to determine an effective model, we can't very well use our *test* set to build upon. So, to move forward on this we have to partition our *training* data set. Any reasonable partition can be used, I generally like to stick to a 60/40 split.
 
@@ -101,6 +108,8 @@ dim(train_validate)
 ```
 
 We can now begin using the data sets to create our prediction models. To test the packages on effectiveness and efficiency we can set it up to call upon the system time functions to determine how long the models take to train.
+
+---
 
 ### Model 1: Decision Trees
 
@@ -128,6 +137,8 @@ fancyRpartPlot(modFit$finalModel)
 
 The results of the confusion matrix aren't promising and the statistics show this model as very weak with only a *48%* accuracy, with a run time of *38.7 seconds*. This was to be expected since with the amount of variables, it would be hard to accurately fit a tree model. This tool comes from the *caret* package so we can ask, would another package, attempting the same thing, be as effective? 
 
+---
+
 ### Model 2: Decision Trees
 
 Another package that can help with decision trees is the standalone *Rpart* package. To call and use the tools, it works very similarly to *train* from the *caret* package.
@@ -151,6 +162,8 @@ fancyRpartPlot(modFit_rp)
 Immmediately, we can see that the *Rpart* package seems to be much more effective than the tools included in the *caret* package. The decision tree plot works to classify more effectively and the confusion matrix and statistics show us a *72.6%* accuracy and a runtime of *2.05 seconds* - **extremely** fast. 
 
 It would seem that we could stop here as a *72.6%* accuracy, while in need of improvement, can definitely be considered a *good* result. This is quite a clean dataset and as such the perfomance seems a little inflated for a decision tree. Trees don't have optimal performance when compared to other methods, especially when dealing with other variables so to further enhance this accuracy we can employ the use of other tools such as *bagging*, *boosting* or *Random Forests*.
+
+---
 
 ### Model 3: Random Forests
 
@@ -179,7 +192,11 @@ prp(treeModel)
 
 Now, this is a much superior model with a level of accuracy, when applied to the test set, of *99.2%*. The runtime however seems to have slowed down at *30.06 seconds*.
 
+---
+
 ## Prediction using Final Model
+
+---
 
 At this point we can assume the Random Forest model to be the most accurate to apply to the test set. To further enhance the accuracy (although not necessary) we can train the model to the entire training set and then apply to the test set.
 
@@ -211,7 +228,11 @@ pml_write_files(final_pred)
 
 By checking our answers, we can find a result of ***20/20***. Pretty good work.
 
+---
+
 ## Conclusion
+
+---
 
 The objective of the project was to examine the data set and apply machine learning techniques to accurately and quantitatively predict how well an exercise is being performed. The data was already split into a training and test set and the training set was used to create a model that could then be applied to the test set to predict the exercise in question. This dataset was quite clean and accurate and we should note that rarely will one with such little pre-processing, high accuracy and little model tuning be available. However, for the purposes of this project, we used this to our advantage to achieve a (more than) satisfactory result.
 
@@ -223,12 +244,18 @@ However, once a good and clean set of variables are determined, for optimal accu
 
 These are basic Machine Learning techniques. Much more powerful methods, such as Neural Networks, exist and can tackle more complex problems. For classification with small-mid size datasets however, the methods explored above can be perfectly effective.
 
+---
+
 ## Notes and References
+
+---
 
 The project was begun as part of Coursework for the Coursera Practical Machine Learning Course as part of the Data Science Specialization offered by John's Hopkins Unversity. It was taken a step further from the original outline with additional packages being explored and contrasted. The data and project overview was provided by http://groupware.les.inf.puc-rio.br/har under a creative commons license for the purposes of learning. Feel free to get in touch if there are errors, questions or concerns you may have regarding my approach or use of the data. I'd be happy to chat about and learn from it!
 
 *Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H.* **Qualitative Activity Recognition of Weight Lifting Exercises** *. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.*
 
-*http://www.statmethods.net/advstats/cart.html*
+Read more: 
 
-Read more: http://groupware.les.inf.puc-rio.br/har#ixzz4E7hwtjlb
+http://groupware.les.inf.puc-rio.br/har#ixzz4E7hwtjlb
+
+http://www.statmethods.net/advstats/cart.html
